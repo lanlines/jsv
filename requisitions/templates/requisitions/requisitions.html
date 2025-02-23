@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<title>{% block title %}Requisitions{% endblock %}</title>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Requisitions</h2>
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Item Requested</th>
+                    <th>Reason</th>
+                    <th>Quantity</th>
+                    <th>Requested By</th>
+                    <th>Requested Date</th>
+                    <th>Status</th>
+                    <th>Status Changed By</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for requisition in requisitions %}
+                <tr>
+                    <td>{{ requisition.item_requested }}</td>
+                    <td>{{ requisition.reason }}</td>
+                    <td>{{ requisition.quantity }}</td>
+                    <td>{{ requisition.requested_by }}</td>
+                    <td>{{ requisition.requested_date|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {% if requisition.status == "pending" %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% elif requisition.status == "approved" %}
+                            <span class="badge bg-success">Approved</span>
+                        {% else %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if requisition.status_changed_by %}
+                            {{ requisition.status_changed_by.username }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editRequisitionModal{{ requisition.id }}">Edit</button>
+                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteRequisitionModal{{ requisition.id }}">Delete</button>
+                        <!-- Delete Requisition Modal -->
+                        <div class="modal fade" id="deleteRequisitionModal{{ requisition.id }}" tabindex="-1" role="dialog" aria-labelledby="deleteRequisitionModalLabel{{ requisition.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteRequisitionModalLabel{{ requisition.id }}">Confirm Delete</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to delete the requisition for "{{ requisition.item_requested }}"?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="requisition_id" value="{{ requisition.id }}">
+                                            <button type="submit" name="delete_requisition" class="btn btn-danger">Delete</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--// Delete Requisition Modal -->
+                        <!-- Edit Requisition Modal -->
+                        <div class="modal fade" id="editRequisitionModal{{ requisition.id }}" tabindex="-1" role="dialog" aria-labelledby="editRequisitionModalLabel{{ requisition.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editRequisitionModalLabel{{ requisition.id }}">Edit Requisition</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="requisition_id" value="{{ requisition.id }}">
+                                            <div class="form-group">
+                                                <label for="item_requested{{ requisition.id }}">Item Requested</label>
+                                                <input type="text" class="form-control" id="item_requested{{ requisition.id }}" name="item_requested" value="{{ requisition.item_requested }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="reason{{ requisition.id }}">Reason</label>
+                                                <input type="text" class="form-control" id="reason{{ requisition.id }}" name="reason" value="{{ requisition.reason }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="quantity{{ requisition.id }}">Quantity</label>
+                                                <input type="number" class="form-control" id="quantity{{ requisition.id }}" name="quantity" value="{{ requisition.quantity }}" required>
+                                            </div>
+                                            <button type="submit" name="edit_requisition" class="btn btn-primary">Save changes</button>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--// Edit Requisition Modal -->
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Include Bootstrap JS and dependencies -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+{% endblock %}

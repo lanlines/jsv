@@ -17,3 +17,6 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
     
+    def is_owner(user): # fucntion to check if user is owner or superuser
+        return user.is_authenticated and (user.role == 'owner' or user.is_superuser)
+    

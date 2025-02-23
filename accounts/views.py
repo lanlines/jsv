@@ -4,10 +4,15 @@ from django.contrib.auth import authenticate, login, logout
 
 from accounts.models import CustomUser
 from .forms import CustomUserCreationForm, CustomLoginForm, CustomUserChangeForm
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+
 
 # Create your views here.
+def home(request):
+    return render(request, 'accounts/home.html')
+
 def login_view(request):
     if request.method == 'POST':
         form = CustomLoginForm(request, data=request.POST)
@@ -30,6 +35,8 @@ def logout_view(request):
 
 @login_required(login_url='login_view')
 def add_user_view(request):
+    if not request.user.is_owner(): # Only owner can add users
+        raise PermissionDenied
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
@@ -53,6 +60,8 @@ def dashboard_view(request):
 
 @login_required(login_url='login_view')
 def users_view(request):
+    if not request.user.is_owner(): # Only owner can view users
+        raise PermissionDenied
     users = CustomUser.objects.all()
     if request.method == 'POST':
         if 'edit_user' in request.POST:
