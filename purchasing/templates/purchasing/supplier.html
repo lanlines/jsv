@@ -1,0 +1,153 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<title>{% block title %}Supplier{% endblock %}</title>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Supplier</h2>
+    <hr>
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-12">
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addSupplierModal">
+                Add Supplier
+            </button>
+            <!-- Modal -->
+            <div class="modal fade" id="addSupplierModal" tabindex="-1" role="dialog" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addSupplierModalLabel">Add Supplier</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                {{ form.as_p }}
+                                <button type="submit" name="add_supplier" class="btn btn-primary">Save</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Contact Name</th>
+                    <th>Contact Email</th>
+                    <th>Contact Phone</th>
+                    <th>Address</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for supplier in suppliers %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ supplier.name }}</td>
+                    <td>{{ supplier.contact_name }}</td>
+                    <td>{{ supplier.contact_email }}</td>
+                    <td>{{ supplier.contact_phone }}</td>
+                    <td>{{ supplier.address }}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editSupplierModal{{ supplier.id }}">Edit</button>
+                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteSupplierModal{{ supplier.id }}">Delete</button>
+                        <!-- Delete Supplier Modal -->
+                        <div class="modal fade" id="deleteSupplierModal{{ supplier.id }}" tabindex="-1" role="dialog" aria-labelledby="deleteSupplierModalLabel{{ supplier.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteSupplierModalLabel{{ supplier.id }}">Confirm Delete</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to delete the supplier "{{ supplier.name }}"?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="supplier_id" value="{{ supplier.id }}">
+                                            <button type="submit" name="delete_supplier" class="btn btn-danger">Delete</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--// Delete Supplier Modal -->
+                        <!-- Edit Supplier Modal -->
+                        <div class="modal fade" id="editSupplierModal{{ supplier.id }}" tabindex="-1" role="dialog" aria-labelledby="editSupplierModalLabel{{ supplier.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editSupplierModalLabel{{ supplier.id }}">Edit Supplier</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="supplier_id" value="{{ supplier.id }}">
+                                            <div class="form-group">
+                                                <label for="name{{ supplier.id }}">Name</label>
+                                                <input type="text" class="form-control" id="name{{ supplier.id }}" name="name" value="{{ supplier.name }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="contact_name{{ supplier.id }}">Contact Name</label>
+                                                <input type="text" class="form-control" id="contact_name{{ supplier.id }}" name="contact_name" value="{{ supplier.contact_name }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="contact_email{{ supplier.id }}">Contact Email</label>
+                                                <input type="email" class="form-control" id="contact_email{{ supplier.id }}" name="contact_email" value="{{ supplier.contact_email }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="contact_phone{{ supplier.id }}">Contact Phone</label>
+                                                <input type="text" class="form-control" id="contact_phone{{ supplier.id }}" name="contact_phone" value="{{ supplier.contact_phone }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="address{{ supplier.id }}">Address</label>
+                                                <input type="text" class="form-control" id="address{{ supplier.id }}" name="address" value="{{ supplier.address }}" required>
+                                            </div>
+                                            <button type="submit" name="edit_supplier" class="btn btn-primary">Save changes</button>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--// Edit Supplier Modal -->
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Include Bootstrap JS and dependencies -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+{% endblock %}

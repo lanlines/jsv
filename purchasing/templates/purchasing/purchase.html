@@ -1,0 +1,537 @@
+{% extends "base.html" %}
+
+{% block content %}
+<title>{% block title %}Purchasing{% endblock %}</title>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Requisitions List</h2>
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="table-responsive">
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addPurchaseModal">
+            Add Purchase
+        </button>
+        <!-- Add Purchase Modal -->
+        <div class="modal fade" id="addPurchaseModal" tabindex="-1" role="dialog" aria-labelledby="addPurchaseModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addPurchaseModalLabel">Create New Purchase</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="addPurchaseForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="direct_purchase" value="true">
+                            
+                            <!-- Purchase Details -->
+                            <div class="form-row mb-3">
+                                <div class="form-group col-md-6">
+                                    <label for="supplier_direct">Supplier</label>
+                                    <select class="form-control" id="supplier_direct" name="supplier" required>
+                                        <option value="">-- Select Supplier --</option>
+                                        {% for supplier in suppliers %}
+                                            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label for="purchase_date_direct">Purchase Date</label>
+                                    <input type="date" class="form-control" id="purchase_date_direct" name="purchase_date" value="{% now 'Y-m-d' %}" required>
+                                </div>
+                            </div>
+                            
+                            <!-- Purchase Items -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">Items to Purchase</h6>
+                                    <button type="button" class="btn btn-light btn-sm" id="addItemBtn">+ Add Item</button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-bordered mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Item Name</th>
+                                                <th>Brand</th>
+                                                <th>Quantity</th>
+                                                <th>Unit Price</th>
+                                                <th>Total</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="purchaseItemsContainer">
+                                            <tr class="purchase-item-row">
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm" 
+                                                        name="item_name_0" required placeholder="Item name">
+                                                </td>
+                                                <td>
+                                                    <select class="form-control form-control-sm" name="brand_0">
+                                                        <option value="">-- No Brand --</option>
+                                                        {% for brand in brands %}
+                                                            <option value="{{ brand.id }}">{{ brand.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm direct-purchase-qty" 
+                                                        name="purchase_qty_0" value="1" min="1" required>
+                                                </td>
+                                                <td>
+                                                    <div class="input-group input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text">₱</span>
+                                                        </div>
+                                                        <input type="number" class="form-control form-control-sm direct-unit-price" 
+                                                            name="unit_price_0" step="0.01" min="0.01" required>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="input-group input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text">₱</span>
+                                                        </div>
+                                                        <input type="text" class="form-control form-control-sm direct-item-total" 
+                                                            name="item_total_0" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th colspan="4" class="text-right">Grand Total:</th>
+                                                <th>
+                                                    <div class="input-group input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text">₱</span>
+                                                        </div>
+                                                        <input type="text" class="form-control form-control-sm" 
+                                                            id="direct_grand_total" 
+                                                            name="grand_total"
+                                                            readonly>
+                                                    </div>
+                                                </th>
+                                                <th></th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Notes -->
+                            <div class="form-group">
+                                <label for="notes_direct">Purchase Notes</label>
+                                <textarea class="form-control" id="notes_direct" name="notes" rows="2"></textarea>
+                            </div>
+                            
+                            <input type="hidden" name="item_count" id="item_count" value="1">
+                            <button type="submit" name="add_direct_purchase" class="btn btn-primary">Create Purchase</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--// Add Purchase Modal -->
+        <table class="table table-bordered table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>id</th>
+                    <th>Item Requested</th>
+                    <th>Reason</th>
+                    <th>Quantity</th>
+                    <th>Brand</th>
+                    <th>Requested By</th>
+                    <th>Requested Date</th>
+                    <th>Status</th>
+                    <th>Status Changed By</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for requisition in requisitions %}
+                    {% for item in requisition.items.all %}
+                    <tr {% if forloop.first %}class="requisition-header"{% endif %}>
+                        {% if forloop.first %}
+                            <td rowspan="{{ requisition.items.count }}">{{ requisition.id }}</td>
+                        {% endif %}
+                        <td>{{ item.item }}</td>
+                        <td>{{ item.reason }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.brand|default:"N/A" }}</td>
+                        {% if forloop.first %}
+                            <td rowspan="{{ requisition.items.count }}">{{ requisition.get_requested_by_display }}</td>
+                            <td rowspan="{{ requisition.items.count }}">{{ requisition.requested_date|date:"M d, Y H:i" }}</td>
+                            <td rowspan="{{ requisition.items.count }}">
+                                {% if requisition.status == "pending" %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif requisition.status == "approved" %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </td>
+                            <td rowspan="{{ requisition.items.count }}">
+                                {% if requisition.status_changed_by %}
+                                    {{ requisition.get_status_changed_by_display }}
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td rowspan="{{ requisition.items.count }}">
+                                {% if requisition.status == 'approved' %}
+                                    {% if user.role == 'owner' or user.is_superuser %}
+                                        <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#purchaseRequisitionModal{{ requisition.id }}">Purchase</button>
+                                    {% endif %}
+                                {% endif %}
+                                <!-- Purchase Requisition Modal -->
+                                <div class="modal fade" id="purchaseRequisitionModal{{ requisition.id }}" tabindex="-1" role="dialog" aria-labelledby="purchaseRequisitionModalLabel{{ requisition.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="purchaseRequisitionModalLabel{{ requisition.id }}">Purchase Requisition #{{ requisition.id }}</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <form method="post" id="purchaseRequisitionForm{{ requisition.id }}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="requisition_id" value="{{ requisition.id }}">
+                                                    
+                                                    <!-- Purchase Details -->
+                                                    <div class="form-row mb-3">
+                                                        <div class="form-group col-md-6">
+                                                            <label for="supplier_{{ requisition.id }}">Supplier</label>
+                                                            <select class="form-control" id="supplier_{{ requisition.id }}" name="supplier" required>
+                                                                <option value="">-- Select Supplier --</option>
+                                                                {% for supplier in suppliers %}
+                                                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="form-group col-md-6">
+                                                            <label for="purchase_date_{{ requisition.id }}">Purchase Date</label>
+                                                            <input type="date" class="form-control" id="purchase_date_{{ requisition.id }}" name="purchase_date" value="{% now 'Y-m-d' %}" required>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Purchase Items -->
+                                                    <div class="card mb-3">
+                                                        <div class="card-header bg-primary text-white">
+                                                            <h6 class="mb-0">Items to Purchase</h6>
+                                                        </div>
+                                                        <div class="card-body p-0">
+                                                            <table class="table table-bordered mb-0">
+                                                                <thead class="thead-light">
+                                                                    <tr>
+                                                                        <th>Item</th>
+                                                                        <th>Brand</th>
+                                                                        <th>Requested Qty</th>
+                                                                        <th>Purchase Qty</th>
+                                                                        <th>Unit Price</th>
+                                                                        <th>Total</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {% for item in requisition.items.all %}
+                                                                    <tr>
+                                                                        <td>{{ item.item_requested }}</td>
+                                                                        <td>
+                                                                            <select class="form-control form-control-sm" id="brand_{{ item.id }}" name="brand_{{ item.id }}">
+                                                                                <option value="">-- Select Brand --</option>
+                                                                                {% for brand in brands %}
+                                                                                    <option value="{{ brand.id }}" {% if brand.id == item.brand.id %}selected{% endif %}>{{ brand.name }}</option>
+                                                                                {% endfor %}
+                                                                            </select>
+                                                                        </td>
+                                                                        <td>{{ item.quantity }}</td>
+                                                                        <td>
+                                                                            <input type="number" class="form-control form-control-sm purchase-qty" 
+                                                                                id="purchase_qty_{{ item.id }}" 
+                                                                                name="purchase_qty_{{ item.id }}" 
+                                                                                value="{{ item.quantity }}" min="1" max="{{ item.quantity }}" required>
+                                                                        </td>
+                                                                        <td>
+                                                                            <div class="input-group input-group-sm">
+                                                                                <div class="input-group-prepend">
+                                                                                    <span class="input-group-text">₱</span>
+                                                                                </div>
+                                                                                <input type="number" class="form-control form-control-sm unit-price" 
+                                                                                    id="unit_price_{{ item.id }}" 
+                                                                                    name="unit_price_{{ item.id }}" 
+                                                                                    step="0.01" min="0.01" required>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td>
+                                                                            <div class="input-group input-group-sm">
+                                                                                <div class="input-group-prepend">
+                                                                                    <span class="input-group-text">₱</span>
+                                                                                </div>
+                                                                                <input type="text" class="form-control form-control-sm item-total" 
+                                                                                    id="item_total_{{ item.id }}" 
+                                                                                    readonly>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                    {% endfor %}
+                                                                </tbody>
+                                                                <tfoot>
+                                                                    <tr>
+                                                                        <th colspan="5" class="text-right">Grand Total:</th>
+                                                                        <th>
+                                                                            <div class="input-group input-group-sm">
+                                                                                <div class="input-group-prepend">
+                                                                                    <span class="input-group-text">₱</span>
+                                                                                </div>
+                                                                                <input type="text" class="form-control form-control-sm" 
+                                                                                    id="grand_total_{{ requisition.id }}" 
+                                                                                    name="grand_total"
+                                                                                    readonly>
+                                                                            </div>
+                                                                        </th>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Additional Notes -->
+                                                    <div class="form-group">
+                                                        <label for="notes_{{ requisition.id }}">Purchase Notes</label>
+                                                        <textarea class="form-control" id="notes_{{ requisition.id }}" name="notes" rows="2"></textarea>
+                                                    </div>
+                                                    
+                                                    <button type="submit" name="purchase_requisition" class="btn btn-primary">Submit Purchase</button>
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!--// Purchase Requisition Modal -->
+                            </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td>{{ requisition.id }}</td>
+                        <td colspan="4">No items in this requisition</td>
+                        <td>{{ requisition.get_requested_by_display }}</td>
+                        <td>{{ requisition.requested_date|date:"M d, Y H:i" }}</td>
+                        <td>
+                            {% if requisition.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif requisition.status == "approved" %}
+                                <span class="badge bg-success">Approved</span>
+                            {% else %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if requisition.status_changed_by %}
+                                {{ requisition.status_changed_by.username }}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center">No requisitions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the item counter
+        let itemCounter = 1;
+        
+        // Add new item row
+        document.getElementById('addItemBtn').addEventListener('click', function() {
+            const container = document.getElementById('purchaseItemsContainer');
+            const newRow = document.createElement('tr');
+            newRow.className = 'purchase-item-row';
+            
+            newRow.innerHTML = `
+                <td>
+                    <input type="text" class="form-control form-control-sm" 
+                        name="item_name_${itemCounter}" required placeholder="Item name">
+                </td>
+                <td>
+                    <select class="form-control form-control-sm" name="brand_${itemCounter}">
+                        <option value="">-- No Brand --</option>
+                        {% for brand in brands %}
+                            <option value="{{ brand.id }}">{{ brand.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm direct-purchase-qty" 
+                        name="purchase_qty_${itemCounter}" value="1" min="1" required>
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">₱</span>
+                        </div>
+                        <input type="number" class="form-control form-control-sm direct-unit-price" 
+                            name="unit_price_${itemCounter}" step="0.01" min="0.01" required>
+                    </div>
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">₱</span>
+                        </div>
+                        <input type="text" class="form-control form-control-sm direct-item-total" 
+                            name="item_total_${itemCounter}" readonly>
+                    </div>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            container.appendChild(newRow);
+            
+            // Add event listeners for the new row
+            const newQtyInput = newRow.querySelector('.direct-purchase-qty');
+            const newPriceInput = newRow.querySelector('.direct-unit-price');
+            
+            newQtyInput.addEventListener('input', calculateItemTotal);
+            newPriceInput.addEventListener('input', calculateItemTotal);
+            
+            // Update item counter
+            itemCounter++;
+            document.getElementById('item_count').value = itemCounter;
+        });
+        
+        // Remove item row
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-item-btn') || e.target.parentElement.classList.contains('remove-item-btn')) {
+                // Don't allow removing the last remaining row
+                const rows = document.querySelectorAll('.purchase-item-row');
+                if (rows.length > 1) {
+                    const row = e.target.closest('.purchase-item-row');
+                    row.remove();
+                    updateDirectGrandTotal();
+                } else {
+                    alert('You must have at least one item in the purchase.');
+                }
+            }
+        });
+        
+        // Calculate item total
+        function calculateItemTotal() {
+            const row = this.closest('tr');
+            const qtyInput = row.querySelector('.direct-purchase-qty');
+            const priceInput = row.querySelector('.direct-unit-price');
+            const totalInput = row.querySelector('.direct-item-total');
+            
+            if (qtyInput.value && priceInput.value) {
+                const total = parseFloat(qtyInput.value) * parseFloat(priceInput.value);
+                totalInput.value = total.toFixed(2);
+            } else {
+                totalInput.value = '';
+            }
+            
+            updateDirectGrandTotal();
+        }
+        
+        // Update grand total for direct purchases
+        function updateDirectGrandTotal() {
+            const totalInputs = document.querySelectorAll('.direct-item-total');
+            const grandTotalInput = document.getElementById('direct_grand_total');
+            
+            let grandTotal = 0;
+            totalInputs.forEach(input => {
+                if (input.value) {
+                    grandTotal += parseFloat(input.value);
+                }
+            });
+            
+            grandTotalInput.value = grandTotal.toFixed(2);
+        }
+        
+        // Add initial event listeners
+        document.querySelectorAll('.direct-purchase-qty, .direct-unit-price').forEach(input => {
+            input.addEventListener('input', calculateItemTotal);
+        });
+    });
+    </script>
+<!-- Include Bootstrap JS and dependencies -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Calculate item totals when quantity or price changes
+        document.querySelectorAll('.purchase-qty, .unit-price').forEach(input => {
+            input.addEventListener('input', calculateItemTotal);
+        });
+        
+        function calculateItemTotal() {
+            const row = this.closest('tr');
+            const qtyInput = row.querySelector('.purchase-qty');
+            const priceInput = row.querySelector('.unit-price');
+            const totalInput = row.querySelector('.item-total');
+            
+            if (qtyInput.value && priceInput.value) {
+                const total = parseFloat(qtyInput.value) * parseFloat(priceInput.value);
+                totalInput.value = total.toFixed(2);
+            } else {
+                totalInput.value = '';
+            }
+            
+            updateGrandTotal();
+        }
+        
+        // Update grand total for the current modal
+        function updateGrandTotal() {
+            const modals = document.querySelectorAll('.modal');
+            
+            modals.forEach(modal => {
+                const totalInputs = modal.querySelectorAll('.item-total');
+                const grandTotalInput = modal.querySelector('[id^="grand_total_"]');
+                
+                if (!grandTotalInput) return;
+                
+                let grandTotal = 0;
+                totalInputs.forEach(input => {
+                    if (input.value) {
+                        grandTotal += parseFloat(input.value);
+                    }
+                });
+                
+                grandTotalInput.value = grandTotal.toFixed(2);
+            });
+        }
+    });
+    </script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+{% endblock %}

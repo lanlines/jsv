@@ -14,18 +14,26 @@ class Requisition(models.Model):
         (SHOP_ATTENDANT, 'Shop Attendant'),
     ]
 
-
-    item_requested = models.CharField(max_length=100)
-    reason = models.CharField(max_length=100)
-    quantity = models.PositiveIntegerField()
     requested_by = models.CharField(max_length=20, choices=ROLE_CHOICES)
     requested_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=50, choices=[
         ('pending', 'Pending'),
         ('approved', 'Approved'),
-        ('rejected', 'Rejected')
+        ('rejected', 'Rejected'),
+        ('purchase', 'Purchase')
     ], default='pending')
-    status_changed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='status_changed_by')
+    status_changed_by = models.CharField(max_length=20, choices=ROLE_CHOICES, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.item.name} - {self.quantity}"      
+        return f"Requisition {self.id} by {self.requested_by}"    
+    
+class RequisitionItem(models.Model):
+    requisition = models.ForeignKey(Requisition, on_delete=models.CASCADE, related_name='items')
+    item_requested = models.CharField(max_length=100)
+    reason = models.CharField(max_length=100)
+    quantity = models.PositiveIntegerField()
+    brand = models.ForeignKey('inventory.Brand', on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.item_requested} - {self.quantity}"
+    

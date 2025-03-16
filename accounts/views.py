@@ -62,7 +62,7 @@ def dashboard_view(request):
 def users_view(request):
     if not request.user.is_owner(): # Only owner can view users
         raise PermissionDenied
-    users = CustomUser.objects.all()
+    users = CustomUser.objects.filter(is_superuser=False)   #   Exclude superusers from displayingin frontend
     if request.method == 'POST':
         if 'edit_user' in request.POST:
             user_id = request.POST.get('user_id')

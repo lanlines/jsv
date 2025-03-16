@@ -20,9 +20,11 @@
         <table class="table table-bordered table-hover table-striped">
             <thead class="table-dark">
                 <tr>
+                    <th>id</th>
                     <th>Item Requested</th>
                     <th>Reason</th>
                     <th>Quantity</th>
+                    <th>Brand</th>
                     <th>Requested By</th>
                     <th>Requested Date</th>
                     <th>Status</th>
@@ -32,31 +34,132 @@
             </thead>
             <tbody>
                 {% for requisition in requisitions %}
-                <tr>
-                    <td>{{ requisition.item_requested }}</td>
-                    <td>{{ requisition.reason }}</td>
-                    <td>{{ requisition.quantity }}</td>
-                    <td>{{ requisition.requested_by }}</td>
-                    <td>{{ requisition.requested_date|date:"M d, Y H:i" }}</td>
-                    <td>
-                        {% if requisition.status == "pending" %}
-                            <span class="badge bg-warning text-dark">Pending</span>
-                        {% elif requisition.status == "approved" %}
-                            <span class="badge bg-success">Approved</span>
-                        {% else %}
-                            <span class="badge bg-danger">Rejected</span>
+                    {% for item in requisition.items.all %}
+                    <tr {% if forloop.first %}class="requisition-header"{% endif %}>
+                        {% if forloop.first %}
+                            <td rowspan="{{ requisition.items.count }}">{{ requisition.id }}</td>
                         {% endif %}
-                    </td>
-                    <td>
-                        {% if requisition.status_changed_by %}
-                            {{ requisition.status_changed_by.username }}
-                        {% else %}
-                            <span class="text-muted">N/A</span>
+                        <td>{{ item.item_requested }}</td>
+                        <td>{{ item.reason }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.brand|default:"N/A" }}</td>
+                        {% if forloop.first %}
+                            <td rowspan="{{ requisition.items.count }}">{{ requisition.get_requested_by_display }}</td>
+                            <td rowspan="{{ requisition.items.count }}">{{ requisition.requested_date|date:"M d, Y H:i" }}</td>
+                            <td rowspan="{{ requisition.items.count }}">
+                                {% if requisition.status == "pending" %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif requisition.status == "approved" %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif requisition.status == "purchased" %}
+                                    <span class="badge bg-success">Purchased</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </td>
+                            <td rowspan="{{ requisition.items.count }}">
+                                {% if requisition.status_changed_by %}
+                                    {{ requisition.get_status_changed_by_display }}
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td rowspan="{{ requisition.items.count }}">
+                                <!-- REJECTED REQUISITIONS: Allow delete for owner/creator/manager and view for managers -->
+                                {% if requisition.status == 'rejected' %}
+                                    <!-- Show delete button for the requester, warehouse manager, owner, or superuser -->
+                                    {% if requisition.requested_by == user.role or user.role == 'warehouse_manager' or user.role == 'owner' or user.is_superuser %}
+                                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteRequisitionModal{{ requisition.id }}">Delete</button>
+                                    {% endif %}
+                                    <!-- Show view button for warehouse staff -->
+                                    {% if user.role == 'warehouse_manager' or user.role == 'shop_attendant' %}
+                                        {% if user.role == 'warehouse_manager' %}
+                                            <a href="{% url 'requisition' requisition.id %}" class="btn btn-primary btn-sm">View</a>
+                                        {% endif %}
+                                    {% endif %}
+                                <!-- REQUESTER'S VIEW: Show actions for the person who made the request -->
+                                {% elif requisition.requested_by == user.role %}
+                                    <!-- For pending requisitions, allow edit and delete -->
+                                    {% if requisition.status == 'pending' %}
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editRequisitionModal{{ requisition.id }}">Edit</button>
+                                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteRequisitionModal{{ requisition.id }}">Delete</button>
+                                    <!-- For approved requisitions, allow delete only -->
+                                    {% elif requisition.status == 'approved' %}
+                                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteRequisitionModal{{ requisition.id }}">Delete</button>
+                                    {% endif %}
+                                <!-- ADMIN VIEW: Show approval actions for owners/superusers -->
+                                {% elif user.role == 'owner' or user.is_superuser %}
+                                    <!-- Only show approve/reject buttons for pending requisitions -->
+                                    {% if requisition.status == 'pending' %}
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#approveRequisitionModal{{ requisition.id }}">Approve</button>
+                                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#rejectRequisitionModal{{ requisition.id }}">Reject</button>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
                         {% endif %}
-                    </td>
-                    <td>
-                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editRequisitionModal{{ requisition.id }}">Edit</button>
-                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteRequisitionModal{{ requisition.id }}">Delete</button>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td>{{ requisition.id }}</td>
+                        <td colspan="4">No items in this requisition</td>
+                        <td>{{ requisition.get_requested_by_display }}</td>
+                        <td>{{ requisition.requested_date|date:"M d, Y H:i" }}</td>
+                        <td>
+                            {% if requisition.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif requisition.status == "approved" %}
+                                <span class="badge bg-success">Approved</span>
+                            {% else %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if requisition.status_changed_by %}
+                                {{ requisition.status_changed_by.username }}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if requisition.requested_by == user.role %}
+                                {% if requisition.status == 'pending' %}
+                                    <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editRequisitionModal{{ requisition.id }}">Edit</button>
+                                    <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteRequisitionModal{{ requisition.id }}">Delete</button>
+                                {% else %}
+                                    <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteRequisitionModal{{ requisition.id }}">Delete</button>
+                                {% endif %}
+                            {% elif user.role == 'owner' or user.is_superuser %}
+                                <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#approveRequisitionModal{{ requisition.id }}">Approve</button>
+                                <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#rejectRequisitionModal{{ requisition.id }}">Reject</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                            <!-- Reject Requisition Modal -->
+                        <div class="modal fade" id="rejectRequisitionModal{{ requisition.id }}" tabindex="-1" role="dialog" aria-labelledby="rejectRequisitionModalLabel{{ requisition.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="rejectRequisitionModalLabel{{ requisition.id }}">Confirm Reject</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to reject the requisition for "{{ requisition.item_requested }}"?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="requisition_id" value="{{ requisition.id }}">
+                                            <button type="submit" name="reject_requisition" class="btn btn-danger">Reject</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--// Reject Requisition Modal -->
                         <!-- Delete Requisition Modal -->
                         <div class="modal fade" id="deleteRequisitionModal{{ requisition.id }}" tabindex="-1" role="dialog" aria-labelledby="deleteRequisitionModalLabel{{ requisition.id }}" aria-hidden="true">
                             <div class="modal-dialog" role="document">
@@ -84,41 +187,119 @@
                         <!--// Delete Requisition Modal -->
                         <!-- Edit Requisition Modal -->
                         <div class="modal fade" id="editRequisitionModal{{ requisition.id }}" tabindex="-1" role="dialog" aria-labelledby="editRequisitionModalLabel{{ requisition.id }}" aria-hidden="true">
-                            <div class="modal-dialog" role="document">
+                            <div class="modal-dialog modal-lg" role="document">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title" id="editRequisitionModalLabel{{ requisition.id }}">Edit Requisition</h5>
+                                        <h5 class="modal-title" id="editRequisitionModalLabel{{ requisition.id }}">Edit Requisition #{{ requisition.id }}</h5>
                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
                                     </div>
                                     <div class="modal-body">
-                                        <form method="post">
+                                        <form method="post" id="editRequisitionForm{{ requisition.id }}">
                                             {% csrf_token %}
                                             <input type="hidden" name="requisition_id" value="{{ requisition.id }}">
+                                            
+                                            <!-- Requisition Status Information -->
                                             <div class="form-group">
-                                                <label for="item_requested{{ requisition.id }}">Item Requested</label>
-                                                <input type="text" class="form-control" id="item_requested{{ requisition.id }}" name="item_requested" value="{{ requisition.item_requested }}" required>
+                                                <label>Status: 
+                                                    <span class="badge {% if requisition.status == 'pending' %}bg-warning text-dark{% elif requisition.status == 'approved' %}bg-success{% else %}bg-danger{% endif %}">
+                                                        {{ requisition.get_status_display }}
+                                                    </span>
+                                                </label>
                                             </div>
-                                            <div class="form-group">
-                                                <label for="reason{{ requisition.id }}">Reason</label>
-                                                <input type="text" class="form-control" id="reason{{ requisition.id }}" name="reason" value="{{ requisition.reason }}" required>
+                                            
+                                            <!-- Requisition Items -->
+                                            <div class="card mb-3">
+                                                <div class="card-header bg-secondary text-white">
+                                                    <h6 class="mb-0">Requisition Items</h6>
+                                                </div>
+                                                <div class="card-body" id="items-container-{{ requisition.id }}">
+                                                    {% for item in requisition.items.all %}
+                                                        <div class="item-form border rounded p-3 mb-3">
+                                                            <div class="form-row">
+                                                                <div class="form-group col-md-6">
+                                                                    <label for="item_requested_{{ requisition.id }}_{{ forloop.counter0 }}">Item Requested</label>
+                                                                    <input type="text" class="form-control" 
+                                                                        id="item_requested_{{ requisition.id }}_{{ forloop.counter0 }}" 
+                                                                        name="items-{{ forloop.counter0 }}-item_requested" 
+                                                                        value="{{ item.item_requested }}" required>
+                                                                    <input type="hidden" name="items-{{ forloop.counter0 }}-id" value="{{ item.id }}">
+                                                                </div>
+                                                                <div class="form-group col-md-6">
+                                                                    <label for="reason_{{ requisition.id }}_{{ forloop.counter0 }}">Reason</label>
+                                                                    <input type="text" class="form-control" 
+                                                                        id="reason_{{ requisition.id }}_{{ forloop.counter0 }}" 
+                                                                        name="items-{{ forloop.counter0 }}-reason" 
+                                                                        value="{{ item.reason }}" required>
+                                                                </div>
+                                                            </div>
+                                                            <div class="form-row">
+                                                                <div class="form-group col-md-6">
+                                                                    <label for="quantity_{{ requisition.id }}_{{ forloop.counter0 }}">Quantity</label>
+                                                                    <input type="number" class="form-control" 
+                                                                        id="quantity_{{ requisition.id }}_{{ forloop.counter0 }}" 
+                                                                        name="items-{{ forloop.counter0 }}-quantity" 
+                                                                        value="{{ item.quantity }}" min="1" required>
+                                                                </div>
+                                                                <div class="form-group col-md-6">
+                                                                    <label for="brand_{{ requisition.id }}_{{ forloop.counter0 }}">Brand</label>
+                                                                    <select class="form-control"
+                                                                        id="brand_{{ requisition.id }}_{{ forloop.counter0 }}"
+                                                                        name="items-{{ forloop.counter0 }}-brand">
+                                                                        <option value="">-- Select Brand --</option>
+                                                                        {% for brand in brands %}
+                                                                            <option value="{{ brand.id }}" {% if item.brand.id == brand.id %}selected{% endif %}>{{ brand.name }}</option>
+                                                                        {% endfor %}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                                
+                                                <!-- Add Item Management Form Fields -->
+                                                <input type="hidden" name="items-TOTAL_FORMS" id="id_items-TOTAL_FORMS-{{ requisition.id }}" value="{{ requisition.items.count }}">
+                                                <input type="hidden" name="items-INITIAL_FORMS" value="{{ requisition.items.count }}">
+                                                <input type="hidden" name="items-MIN_NUM_FORMS" value="1">
+                                                <input type="hidden" name="items-MAX_NUM_FORMS" value="1000">
                                             </div>
-                                            <div class="form-group">
-                                                <label for="quantity{{ requisition.id }}">Quantity</label>
-                                                <input type="number" class="form-control" id="quantity{{ requisition.id }}" name="quantity" value="{{ requisition.quantity }}" required>
-                                            </div>
-                                            <button type="submit" name="edit_requisition" class="btn btn-primary">Save changes</button>
+                                            
+                                            <button type="submit" name="edit_requisition" class="btn btn-primary">Save Changes</button>
                                         </form>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <!--// Edit Requisition Modal -->
-                    </td>
+                        <!-- Approve Requisition Modal -->
+                        <div class="modal fade" id="approveRequisitionModal{{ requisition.id }}" tabindex="-1" role="dialog" aria-labelledby="approveRequisitionModalLabel{{ requisition.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="approveRequisitionModalLabel{{ requisition.id }}">Confirm Approve</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to approve the requisition for "{{ requisition.item_requested }}"?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="requisition_id" value="{{ requisition.id }}">
+                                            <button type="submit" name="approve_requisition" class="btn btn-success">Approve</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--// Approve Requisition Modal -->
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center">No requisitions found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

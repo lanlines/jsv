@@ -57,16 +57,30 @@
 			</li>
 			{% endif %}
 			<li>
-                <a href="#"><i class="bi bi-stickies icon"></i> Requisitions <i class='bx bx-chevron-right icon-right'></i></a>
+				<a href="#"><i class="bi bi-stickies icon"></i> Requisitions <i class='bx bx-chevron-right icon-right'></i></a>
 				<ul class="side-dropdown">
 					<li><a href="{% url 'requisitions' %}">Requisitions</a></li>
-					<li><a href="{% url 'create_requisition' %}">Create Requisitions</a></li>
+					{% if user.is_authenticated and user.role != 'owner' and not user.is_superuser %}
+						<li><a href="{% url 'create_requisition' %}">Create Requisitions</a></li>
+					{% endif %}
 				</ul>
 			</li>
+			{% if user.is_authenticated and user.role == 'owner' or  user.is_superuser %} <!-- only owner and superuser can access accounts functionality-->
+			<li>
+                <a href="#"><i class="bi bi-boxes icon"></i> Purchasing <i class='bx bx-chevron-right icon-right'></i></a>
+				<ul class="side-dropdown">
+					<li><a href="{% url 'supplier' %}">Supplier</a></li>
+					<li><a href="{% url 'purchase' %}">Purchasing</a></li>
+					<li><a href="{% url 'purchase_list' %}">Purchasing List</a></li>
+				</ul>
+            </li>
+			{% endif %}
 			<li>
                 <a href="#"><i class="bi bi-boxes icon"></i> Inventory <i class='bx bx-chevron-right icon-right'></i></a>
 				<ul class="side-dropdown">
-					<li><a href="{% url 'users' %}">Users</a></li>
+					{% if user.is_authenticated and user.role == 'owner' or  user.is_superuser %}
+						<li><a href="{% url 'brand' %}">Brand</a></li>
+					{% endif %}
 				</ul>
             </li>
 			<li><a href="#"><i class='bx bxs-widget icon'></i> Widgets</a></li>
@@ -101,7 +115,7 @@
 					<i class='bx bx-search icon'></i>
 				</div>
 				<!-- for testing. remove after developmnet -->
-				<p>Role: {{ user.role }}</p>	
+				<p>Role: {{ user.role }}	Username: {{ user.username }}</p>
 			</form>
 			<a href="#" class="nav-link">
 				<i class='bx bxs-bell icon'></i>

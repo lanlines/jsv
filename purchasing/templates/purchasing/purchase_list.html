@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<title>{% block title %}Purchse List{% endblock %}</title>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Purchase List</h2>
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Purchase ID</th>
+                    <th>Requisition #</th>
+                    <th>Supplier</th>
+                    <th>Purchase Date</th>
+                    <th>Brand</th>
+                    <th>Item name</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Subtotal</th>
+                    <th>Grand Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in purchases %}
+                    {% for item in purchase.items.all %}
+                    <tr {% if forloop.first %}class="purchase-header"{% endif %}>
+                        {% if forloop.first %}
+                            <td rowspan="{{ purchase.items.count }}">{{ purchase.id }}</td>
+                            <td rowspan="{{ purchase.items.count }}">{{ purchase.requisition.id|default:"Direct Purchase" }}</td>
+                            <td rowspan="{{ purchase.items.count }}">{{ purchase.supplier.name }}</td>
+                            <td rowspan="{{ purchase.items.count }}">{{ purchase.purchase_date|date:"M d, Y" }}</td>
+                        {% endif %}
+                        <td>{{ item.brand }}</td>
+                        <td>{{ item.item }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>₱{{ item.unit_price|floatformat:2 }}</td>
+                        <td>₱{{ item.total_price|floatformat:2 }}</td>
+                        {% if forloop.first %}
+                            <td rowspan="{{ purchase.items.count }}">₱{{ purchase.grand_total|floatformat:2 }}</td>
+                            <td rowspan="{{ purchase.items.count }}">
+                                <a href="#" class="btn btn-primary btn-sm">View</a>
+                                {% if user.role == 'warehouse_manager' or user.is_superuser %}
+                                    <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#receiveItemsModal{{ purchase.id }}">
+                                        Receive
+                                    </button>
+                                {% endif %}
+                                {% if user.is_superuser %}
+                                    <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deletePurchaseModal{{ purchase.id }}">
+                                        Delete
+                                    </button>
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="text-center">No items in this purchase</td>
+                    </tr>
+                    {% endfor %}
+                {% empty %}
+                <tr>
+                    <td colspan="11" class="text-center">No purchases found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Include Bootstrap JS and dependencies -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+{% endblock %}

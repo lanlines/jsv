@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Brand Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Brands</h2>
+    <hr>
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-12">
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addBrandModal">
+                Add Brand
+            </button>
+            <!-- Add Brand Modal -->
+            <div class="modal fade" id="addBrandModal" tabindex="-1" role="dialog" aria-labelledby="addBrandModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addBrandModalLabel">Add New Brand</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="form-group mb-3">
+                                    <label for="brand_name">Brand Name</label>
+                                    <input type="text" class="form-control" id="brand_name" name="name" required>
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="description">Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                </div>
+                                
+                                <button type="submit" name="add_brand" class="btn btn-primary">Save</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Brand Table -->
+    <div class="table-responsive mt-4">
+        <table class="table table-bordered table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Brand Name</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for brand in brands %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ brand.name }}</td>
+                    <td>{{ brand.description|default:"-" }}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editBrandModal{{ brand.id }}">Edit</button>
+                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteBrandModal{{ brand.id }}">Delete</button>
+                        
+                        <!-- Delete Brand Modal -->
+                        <div class="modal fade" id="deleteBrandModal{{ brand.id }}" tabindex="-1" role="dialog" aria-labelledby="deleteBrandModalLabel{{ brand.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteBrandModalLabel{{ brand.id }}">Confirm Delete</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to delete the brand "{{ brand.name }}"?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="brand_id" value="{{ brand.id }}">
+                                            <button type="submit" name="delete_brand" class="btn btn-danger">Delete</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Edit Brand Modal -->
+                        <div class="modal fade" id="editBrandModal{{ brand.id }}" tabindex="-1" role="dialog" aria-labelledby="editBrandModalLabel{{ brand.id }}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editBrandModalLabel{{ brand.id }}">Edit Brand</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="brand_id" value="{{ brand.id }}">
+                                            <div class="form-group mb-3">
+                                                <label for="name{{ brand.id }}">Brand Name</label>
+                                                <input type="text" class="form-control" id="name{{ brand.id }}" name="name" value="{{ brand.name }}" required>
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="description{{ brand.id }}">Description</label>
+                                                <textarea class="form-control" id="description{{ brand.id }}" name="description" rows="3">{{ brand.description }}</textarea>
+                                            </div>
+                                            <button type="submit" name="edit_brand" class="btn btn-primary">Save changes</button>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">No brands found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Include Bootstrap JS and dependencies -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+{% endblock %}

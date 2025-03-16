@@ -32,6 +32,8 @@ urlpatterns = [
     path('', home, name='home'),  # This makes the home page accessible at /
     path('accounts/', include('accounts.urls')),
     path('requisitions/', include('requisitions.urls')),
+    path('purchasing/', include('purchasing.urls')),
+    path('inventory/', include('inventory.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
